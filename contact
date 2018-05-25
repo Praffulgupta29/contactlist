@@ -149,3 +149,78 @@ db_query("INSERT INTO {member} (fname, lname, email, pass) VALUES ('".$fname."',
 
     drupal_set_message(t('The form has been submitted.'));
 }
+
+
+------------------------
+
+<?php
+
+function contacts_menu() {
+  $items = array();
+  $items['contacts/form'] = array(
+    'title' => t('My form'),
+    'page callback' => 'contacts_form',
+    'access arguments' => array('access content'),
+    'description' => t('My form'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function contacts_form() {
+  return drupal_get_form('contacts_my_form');
+}
+
+function contacts_my_form($form_state) {
+  $form['first'] = array(
+    '#type' => 'textfield',
+    '#title' => t('First Name'),
+	'#required' => TRUE, // Added
+	'#size' => 20, // added
+    '#maxlength' => 20, // added
+  );
+  $form['last'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Last Name'),
+	'#required' => TRUE, // Added
+  );
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email'),
+	'#required' => TRUE, // Added
+  );
+  $form['phone'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Phone Number'),
+	'#required' => TRUE, // Added
+  );
+	$form['status'] = array(
+		'#type' => 'radios',
+		'#title' => t('Status'),
+		'#options' => array(
+		t('Active'),
+		t('Inactive'),
+		)
+	);
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+  return $form;
+}
+
+function contacts_my_form_validate($form, &$form_state) {
+
+}
+
+function contacts_my_form_submit($form, &$form_state) {
+$fname = $form_state['values']['first'];
+$lname = $form_state['values']['last'];
+$email = $form_state['values']['email'];
+$pass = $form_state['values']['pass'];
+
+db_query("INSERT INTO {contacts} (fname, lname, email, pass) VALUES ('".$fname."', '".$lname."', '".$email."', '".$pass."')");
+
+    drupal_set_message(t('The form has been submitted.'));
+}
