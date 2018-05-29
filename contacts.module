@@ -1,0 +1,341 @@
+<?php
+/**
+ *
+ * Hook Menu
+ *
+ * @return      array
+ *
+ */
+function contacts_menu()
+{
+    $items = array();
+    $items['contacts/form'] = array(
+        'title' => t('My form') ,
+        'page callback' => 'contacts_form',
+        'access arguments' => array(
+            'access content'
+        ) ,
+        'description' => t('My form') ,
+        'type' => MENU_CALLBACK
+    );
+    $items['contacts'] = array(
+        'title' => t('Contacts list') ,
+        'page callback' => 'contacts_list',
+        'access arguments' => array(
+            'access content'
+        ) ,
+        'type' => MENU_NORMAL_ITEM
+    );
+    $items['contacts/delete/%contacts_user'] = array(
+        'title' => t('Delete contacts') ,
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array(
+            'contacts_delete_confirm',
+            2
+        ) ,
+        'access arguments' => array(
+            'access content'
+        ) ,
+        'type' => MENU_CALLBACK
+    );
+    $items['contacts/edit/%contacts_user'] = array(
+        'title' => t('Edit Form') ,
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array(
+            'contacts_edit_confirm',
+            2
+        ) ,
+        'access arguments' => array(
+            'access content'
+        ) ,
+        'type' => MENU_NORMAL_ITEM
+    );
+    return $items;
+}
+
+/**
+ *
+ * Load a user data
+ *
+ * @param    int
+ * @return      Object
+ *
+ */
+function contacts_user_load($contactsid)
+{
+    $query = "SELECT * FROM {contacts} WHERE id = $contactsid";
+    $rs = db_query($query);
+    if ($rs)
+    {
+        while ($data = db_fetch_object($rs))
+        {
+            return $data;
+        }
+    }
+    return false;
+}
+
+/**
+ *
+ * to edit an existing contact
+ *
+ * @param    Array
+ *
+ */
+function contacts_edit_confirm($form, &$form_state, $contacts)
+{
+    $form['_contacts'] = array(
+        '#type' => 'value',
+        '#value' => $contacts
+    );
+    $form['first'] = array(
+        '#type' => 'textfield',
+        '#title' => t('First Name') ,
+        '#required' => true, // Added
+        '#size' => 20, // added
+        '#default_value' => $form_state['build_info']['args'][0]->first_name // added
+        
+    );
+    $form['last'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Last Name') ,
+        '#required' => true,
+        '#default_value' => $form_state['build_info']['args'][0]->last_name // added
+        
+    );
+    $form['email'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Email') ,
+        '#required' => true,
+        '#default_value' => $form_state['build_info']['args'][0]->email
+    );
+    $form['phone'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Phone Number') ,
+        '#required' => true,
+        '#default_value' => $form_state['build_info']['args'][0]->phone // added
+        
+    );
+    $form['status'] = array(
+        '#type' => 'radios',
+        '#title' => t('Status') ,
+        '#required' => true,
+        '#options' => array(
+            t('Inactive') ,
+            t('Active')
+        )
+    );
+    return confirm_form($form, t('') , isset($_GET['destination']) ? $_GET['destination'] : "contacts", t('') , t('Edit') , t('Cancel'));
+}
+/**
+ *
+ * Submits an edited form
+ *
+ * @param    array
+ *
+ */
+function contacts_edit_confirm_submit($form, &$form_state)
+{
+    if ($form_state['values']['confirm'])
+    {
+        $contacts = $form_state['values']['_contacts'];
+        $firstname = $form_state['values']['first'];
+        $lastname = $form_state['values']['last'];
+        $email = $form_state['values']['email'];
+        $phone = $form_state['values']['phone'];
+        $status = $form_state['values']['status'];
+        $query = "UPDATE  {contacts} SET first_name = '" . $firstname . "', last_name= '" . $lastname . "', email = '" . $email . "', phone = '" . $phone . "', status='" . $status . "' WHERE id=$contacts->id";
+        //echo $query; die;
+        $rs = db_query($query);
+    }
+    drupal_goto("contacts");
+}
+
+/**
+ *
+ * Delete a contact
+ *
+ * @param    array
+ *
+ */
+function contacts_delete_confirm($form, &$form_state, $contacts)
+{
+    $form['_contacts'] = array(
+        '#type' => 'value',
+        '#value' => $contacts
+    );
+    return confirm_form($form, t('Are you sure you want to delete this contact?') , isset($_GET['destination']) ? $_GET['destination'] : "contacts", t('This action cannot be undone.') , t('Delete') , t('Cancel'));
+}
+
+/**
+ *
+ * Delete a contact
+ *
+ * @param    array
+ *
+ */
+function contacts_delete_confirm_submit($form, &$form_state)
+{
+    $form_values = $form_state['values'];
+    if ($form_state['values']['confirm'])
+    {
+        $contacts = $form_state['values']['_contacts'];
+        $contactsId = $contacts->id;
+        $query = "DELETE  FROM {contacts} where id=" . $contactsId;
+        $rs = db_query($query);
+        drupal_set_message(t('contact has been deleted successfully.'));
+    }
+    drupal_goto("contacts");
+}
+
+/**
+ *
+ * Listing of contact
+ *
+ * @param    array
+ *
+ */
+function contacts_list()
+{
+    global $base_path;
+    $header = array(
+        t('Name') ,
+        t('Email') ,
+        t('Status') ,
+        t('Action')
+    );
+    $str = '';
+    $query = db_select('contacts', 'f');
+    $query->fields('f');
+    $arr_result = $query->execute();
+    $rows = array();
+    foreach ($arr_result as $result)
+    {
+        $name = $result->first_name . ' ' . $result->last_name;
+        $status = empty($result->status) ? 'Inactive' : 'Active';
+        $row[] = array(
+            stripslashes(ucwords($name)) ,
+            $result->email,
+            $status,
+            "<a href=" . $base_path . "contacts/edit/{$result->id}>" . t('Edit') . "</a> | <a href=" . $base_path . "contacts/delete/{$result->id}>" . t('Delete') . "</a>"
+        );
+    }
+    $attributes = null;
+    $str .= theme('table', array(
+        'header' => $header,
+        'rows' => $row
+    ));
+    return $str;
+}
+
+/**
+ *
+ * Create contact form
+ *
+ * @param    array
+ *
+ */
+function contacts_form()
+{
+    return drupal_get_form('contacts_my_form');
+}
+
+/**
+ *
+ * Form for adding new contact
+ *
+ * @param    array
+ * @return array
+ */
+function contacts_my_form($form_state)
+{
+    $form['first'] = array(
+        '#type' => 'textfield',
+        '#title' => t('First Name') ,
+        '#required' => true, // Added
+        '#size' => 20, // added
+        '#maxlength' => 20
+        // added
+        
+    );
+    $form['last'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Last Name') ,
+        '#required' => true
+    );
+    $form['email'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Email') ,
+        '#required' => true
+    );
+    $form['phone'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Phone Number') ,
+        '#required' => true
+    );
+    $form['status'] = array(
+        '#type' => 'radios',
+        '#title' => t('Status') ,
+        '#required' => true,
+        '#options' => array(
+            t('Inactive') ,
+            t('Active')
+        )
+    );
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Submit'
+    );
+    return $form;
+}
+
+/**
+ *
+ * Just supporting the drupal 7
+ *
+ * @param    array
+ * @return 
+ */
+function db_fetch_object($res)
+{
+    return $res->fetchObject();
+}
+
+/**
+ *
+ * Validating a form
+ *
+ * @param    array
+ * @return 
+ */
+function contacts_my_form_validate($form, &$form_state)
+{
+    if (!valid_email_address($form['email']['#value']))
+    {
+        form_set_error('submitted][email', t('The email address appears to be invalid.'));
+    }
+    if ($form['phone']['#value'] != '' && !is_numeric($form['phone']['#value']))
+    {
+        form_set_error('submitted][Phone', t('Phone number should be numeric'));
+    }
+}
+
+/**
+ *
+ * Submitting a contact form
+ *
+ * @param    array
+ * @return 
+ */
+function contacts_my_form_submit($form, &$form_state)
+{
+    $fname = $form_state['values']['first'];
+    $lname = $form_state['values']['last'];
+    $email = $form_state['values']['email'];
+    $phone = $form_state['values']['phone'];
+    $status = $form_state['values']['status'];
+    db_query("INSERT INTO {contacts} (first_name, last_name, email, phone, status) VALUES ('" . $fname . "', '" . $lname . "', '" . $email . "', '" . $phone . "', '" . $status . "')");
+    drupal_set_message(t('The form has been submitted.'));
+    drupal_goto("contacts");
+}
+
