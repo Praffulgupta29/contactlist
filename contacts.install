@@ -1,0 +1,77 @@
+<?php
+/**
+ *
+ * Schema for contacts
+ *
+ *
+ */
+function contacts_schema()
+{
+    $schema['contacts'] = array(
+        'description' => t('Maintain contacts'),
+        'fields' => array(
+            'id' => array(
+                'description' => t('node id associated with this actor'),
+                'type' => 'serial',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+                'default' => 0
+            ),
+            
+            'first_name' => array(
+                'description' => t('first name'),
+                'type' => 'varchar',
+                'length' => 127,
+                'not null' => TRUE,
+                'default' => ''
+            ),
+            'last_name' => array(
+                'description' => t('last name'),
+                'type' => 'varchar',
+                'length' => 127,
+                'not null' => TRUE,
+                'default' => ''
+            ),
+            'email' => array(
+                'description' => t('email'),
+                'type' => 'varchar',
+                'length' => 127,
+                'not null' => TRUE,
+                'default' => ''
+            ),
+            'phone' => array(
+                'description' => t('phone'),
+                'type' => 'varchar',
+                'length' => 127,
+                'not null' => TRUE,
+                'default' => ''
+            ),
+            'status' => array(
+                'description' => t('status'),
+                'type' => 'varchar',
+                'length' => 2,
+                'not null' => TRUE,
+                'default' => ''
+            )
+        ),
+        'primary key' => array(
+            'id'
+        ) // Version is primary key. Could do nid, vid.
+    );
+    
+    return $schema;
+    
+}
+
+/**
+ *
+ * Hook uninstall
+ *
+ *
+ */
+function contacts_uninstall() {
+    // Remove tables.
+    drupal_uninstall_schema('contacts');
+}
+
+?>
